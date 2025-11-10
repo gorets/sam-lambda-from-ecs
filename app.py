@@ -27,9 +27,9 @@ def lambda_handler(event, context):
     # Пример использования boto3 - получаем список S3 buckets
     try:
         # Раскомментируйте следующие строки, если хотите реально обращаться к S3
-        # response = s3_client.list_buckets()
-        # buckets = [bucket['Name'] for bucket in response['Buckets']]
-        buckets = ["Пример работы с boto3 - закомментировано для безопасности"]
+        response = s3_client.list_buckets()
+        buckets = [bucket['Name'] for bucket in response['Buckets']]
+        # buckets = ["Пример работы с boto3 - закомментировано для безопасности"]
     except Exception as e:
         buckets = [f"Ошибка при получении списка buckets: {str(e)}"]
 

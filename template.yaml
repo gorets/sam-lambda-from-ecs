@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
-  SAM Template для Lambda функции с использованием Docker образа из ECR
+  SAM Template for creating Lambda function with Docker image from ECR
 
 Parameters:
   UseExistingImage:
@@ -10,17 +10,17 @@ Parameters:
     AllowedValues:
       - 'true'
       - 'false'
-    Description: Использовать существующий образ из ECR (true) или собрать новый (false)
+    Description: Use existing Docker image from ECR (true) or build a new one (false)
 
   EcrRepositoryName:
     Type: String
-    Default: ''
-    Description: Имя существующего ECR репозитория (если UseExistingImage=true)
+    Default: 'gorobets-test-ecr'
+    Description: Name of the existing ECR repository (if UseExistingImage=true)
 
   ImageTag:
     Type: String
     Default: 'latest'
-    Description: Тег Docker образа (если UseExistingImage=true)
+    Description: Tag of the Docker image (if UseExistingImage=true)
 
 Conditions:
   BuildNewImage: !Equals [!Ref UseExistingImage, 'false']
@@ -32,7 +32,7 @@ Globals:
     MemorySize: 512
 
 Resources:
-  # Lambda функция с автоматической сборкой образа
+  # Lambda function with new Docker image build from scratch
   MyLambdaFunctionBuild:
     Type: AWS::Serverless::Function
     Condition: BuildNewImage
@@ -58,7 +58,7 @@ Resources:
       DockerContext: .
       DockerTag: python3.11-v1
 
-  # Lambda функция с использованием существующего образа
+  # Lambda function with existing Docker image from ECR
   MyLambdaFunctionExisting:
     Type: AWS::Serverless::Function
     Condition: UseExistingEcrImage
@@ -78,12 +78,12 @@ Resources:
         ApiEvent:
           Type: Api
           Properties:
-            Path: /hello
+            Path: /hello-exists
             Method: get
 
 Outputs:
   MyLambdaFunctionApi:
-    Description: "API Gateway endpoint URL для Lambda функции"
+    Description: "API Gateway endpoint URL for Lambda function"
     Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/"
   MyLambdaFunctionArn:
     Description: "Lambda Function ARN"
@@ -92,7 +92,7 @@ Outputs:
       - !GetAtt MyLambdaFunctionBuild.Arn
       - !GetAtt MyLambdaFunctionExisting.Arn
   MyLambdaFunctionIamRole:
-    Description: "IAM Role для Lambda функции"
+    Description: "IAM Role for Lambda Function"
     Value: !If
       - BuildNewImage
       - !GetAtt MyLambdaFunctionBuildRole.Arn
