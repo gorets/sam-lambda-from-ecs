@@ -1,0 +1,44 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  SAM Template для Lambda функции с использованием Docker образа из ECR
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 512
+
+Resources:
+  MyLambdaFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      ImageConfig:
+        Command:
+          - app.lambda_handler
+      Architectures:
+        - x86_64
+      Environment:
+        Variables:
+          LOG_LEVEL: INFO
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /hello
+            Method: get
+    Metadata:
+      Dockerfile: Dockerfile
+      DockerContext: .
+      DockerTag: python3.11-v1
+
+Outputs:
+  MyLambdaFunctionApi:
+    Description: "API Gateway endpoint URL для Lambda функции"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/"
+  MyLambdaFunction:
+    Description: "Lambda Function ARN"
+    Value: !GetAtt MyLambdaFunction.Arn
+  MyLambdaFunctionIamRole:
+    Description: "IAM Role для Lambda функции"
+    Value: !GetAtt MyLambdaFunctionRole.Arn
