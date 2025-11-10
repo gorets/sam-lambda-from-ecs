@@ -79,13 +79,52 @@ sam deploy --guided
 sam build && sam deploy
 ```
 
+### 3. Использование существующего ECR репозитория
+
+Если у вас уже есть Docker образ в ECR, можно использовать его напрямую:
+
+```bash
+sam deploy --guided \
+  --parameter-overrides \
+    UseExistingImage=true \
+    EcrRepositoryName=my-existing-repo \
+    ImageTag=v1.0.0
+```
+
+Или добавить параметры в `samconfig.toml`:
+
+```toml
+[default.deploy.parameters]
+parameter_overrides = "UseExistingImage=true EcrRepositoryName=my-existing-repo ImageTag=latest"
+```
+
+**Важно:** Lambda автоматически определит ваш AWS Account ID и регион, поэтому достаточно указать только имя репозитория и тег.
+
+Полный URI образа будет: `{AccountId}.dkr.ecr.{Region}.amazonaws.com/{EcrRepositoryName}:{ImageTag}`
+
+### 4. Переключение между режимами
+
+**Режим автоматической сборки (по умолчанию):**
+```bash
+sam build && sam deploy
+# или
+sam deploy --parameter-overrides UseExistingImage=false
+```
+
+**Режим использования существующего образа:**
+```bash
+sam deploy --parameter-overrides UseExistingImage=true EcrRepositoryName=my-repo ImageTag=latest
+```
+
 ## Что создается?
 
 SAM автоматически создаст:
-1. **ECR репозиторий** для Docker образа
+1. **ECR репозиторий** для Docker образа (только если `UseExistingImage=false`)
 2. **Lambda функцию** с образом из ECR
 3. **API Gateway** с endpoint `/hello`
 4. **IAM роль** для Lambda функции
+
+При использовании существующего ECR (`UseExistingImage=true`), SAM только создаст Lambda функцию и подключит её к вашему образу.
 
 ## Особенности
 

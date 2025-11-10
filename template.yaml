@@ -3,15 +3,41 @@ Transform: AWS::Serverless-2016-10-31
 Description: >
   SAM Template для Lambda функции с использованием Docker образа из ECR
 
+Parameters:
+  UseExistingImage:
+    Type: String
+    Default: 'false'
+    AllowedValues:
+      - 'true'
+      - 'false'
+    Description: Использовать существующий образ из ECR (true) или собрать новый (false)
+
+  EcrRepositoryName:
+    Type: String
+    Default: ''
+    Description: Имя существующего ECR репозитория (если UseExistingImage=true)
+
+  ImageTag:
+    Type: String
+    Default: 'latest'
+    Description: Тег Docker образа (если UseExistingImage=true)
+
+Conditions:
+  BuildNewImage: !Equals [!Ref UseExistingImage, 'false']
+  UseExistingEcrImage: !Equals [!Ref UseExistingImage, 'true']
+
 Globals:
   Function:
     Timeout: 30
     MemorySize: 512
 
 Resources:
-  MyLambdaFunction:
+  # Lambda функция с автоматической сборкой образа
+  MyLambdaFunctionBuild:
     Type: AWS::Serverless::Function
+    Condition: BuildNewImage
     Properties:
+      FunctionName: MyLambdaFunction
       PackageType: Image
       ImageConfig:
         Command:
@@ -32,13 +58,42 @@ Resources:
       DockerContext: .
       DockerTag: python3.11-v1
 
+  # Lambda функция с использованием существующего образа
+  MyLambdaFunctionExisting:
+    Type: AWS::Serverless::Function
+    Condition: UseExistingEcrImage
+    Properties:
+      FunctionName: MyLambdaFunction
+      PackageType: Image
+      ImageUri: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${EcrRepositoryName}:${ImageTag}'
+      ImageConfig:
+        Command:
+          - app.lambda_handler
+      Architectures:
+        - x86_64
+      Environment:
+        Variables:
+          LOG_LEVEL: INFO
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /hello
+            Method: get
+
 Outputs:
   MyLambdaFunctionApi:
     Description: "API Gateway endpoint URL для Lambda функции"
     Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/"
-  MyLambdaFunction:
+  MyLambdaFunctionArn:
     Description: "Lambda Function ARN"
-    Value: !GetAtt MyLambdaFunction.Arn
+    Value: !If
+      - BuildNewImage
+      - !GetAtt MyLambdaFunctionBuild.Arn
+      - !GetAtt MyLambdaFunctionExisting.Arn
   MyLambdaFunctionIamRole:
     Description: "IAM Role для Lambda функции"
-    Value: !GetAtt MyLambdaFunctionRole.Arn
+    Value: !If
+      - BuildNewImage
+      - !GetAtt MyLambdaFunctionBuildRole.Arn
+      - !GetAtt MyLambdaFunctionExistingRole.Arn
